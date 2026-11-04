@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "video-corpus-miner"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+vcm = "video_corpus_miner.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/video_corpus_miner"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -19,10 +19,10 @@
         devShells.default = pkgs.mkShell {
           # 1. System-level packages your video miner will need
           buildInputs = with pkgs; [
-            python311                  # Fixed Python version
-            python311Packages.pip      # Pip inside the environment
-            python311Packages.virtualenv
-            
+            python311                  # Fixed Python version. pip comes from the venv:
+                                       # python311Packages.* here would leak in through PYTHONPATH
+            git                        # macOS's /usr/bin/git can't run with this shell's DEVELOPER_DIR
+
             # Heavy lifting media/data dependencies
             ffmpeg-full                # Full FFmpeg suite for video manipulation
             pkg-config                 # Helps Python wheels find system C-libraries
@@ -33,17 +33,26 @@
 
           # 2. Environment variables to tell Python where to find C-libraries
           shellHook = ''
-            # Create a virtual environment if it doesn't exist
-            if [ ! -d ".venv" ]; then
+            # Rebuild the venv if it doesn't use the flake's Python
+            PY=${pkgs.python311}/bin/python
+            if [ "$(readlink .venv/bin/python)" != "$PY" ]; then
               echo "Creating virtual environment..."
-              python -m venv .venv
+              "$PY" -m venv --clear .venv
+              .venv/bin/python -m pip install --upgrade pip
             fi
 
             # Activate the virtual environment automatically
             source .venv/bin/activate
 
-            # Ensure pip is up to date inside the venv
-            pip install --upgrade pip setuptools wheel
+            # Nix's Python sets this, and it would take priority over the venv's packages
+            unset PYTHONPATH
+
+            ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+              # Nix's git doesn't read Apple's git config, which is where the keychain login is set
+              export GIT_CONFIG_COUNT=1
+              export GIT_CONFIG_KEY_0=credential.helper
+              export GIT_CONFIG_VALUE_0=osxkeychain
+            ''}
 
             # Fixes common binary wheel loading errors (like OpenCV, PyTorch, etc.) looking for glibc
             export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
