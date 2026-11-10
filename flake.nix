@@ -47,7 +47,7 @@
             # Nix's Python sets this, and it would take priority over the venv's packages
             unset PYTHONPATH
 
-            ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+            ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
               # Nix's git doesn't read Apple's git config, which is where the keychain login is set
               export GIT_CONFIG_COUNT=1
               export GIT_CONFIG_KEY_0=credential.helper
